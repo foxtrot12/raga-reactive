@@ -1,26 +1,28 @@
 import { Observable, Subject } from "rxjs";
 
-interface TokenMapValueT<T> {
+export interface TokenMapValueT<T> {
   subject: Subject<T>;
   value: T;
 }
 
-// Define the return type interface for the getNewStore function
-export interface Store<StoreT> {
-  getToken<K extends keyof StoreT>(key: K): StoreT[K];
-  setToken<K extends keyof StoreT>(token: StoreT[K], key: K): void;
-  emptyStore(hardEmpty?: boolean): Map<keyof StoreT, TokenMapValueT<any>>;
-  subscribeToChange<K extends keyof StoreT>(key: K): Observable<StoreT[K]>;
+export interface TokenTypeBase{
+  [key : string] : any
 }
 
+export interface Store<TokenT extends TokenTypeBase = any> {
+  getToken<K extends keyof TokenT>(key: K): TokenT[K];
+  setToken<K extends keyof TokenT>(token: TokenT[K], key: K): void;
+  emptyStore(hardEmpty?: boolean): Map<keyof TokenT, TokenMapValueT<any>>;
+  subscribeToChange<K extends keyof TokenT>(key: K): Observable<TokenT[K]>;
+}
 
-export function getNewStore<StoreT>():Store<StoreT>  {
-  type KeyT = keyof StoreT;
+export function getNewStore<TokenT extends TokenTypeBase>():Store<TokenT> {
+  type KeyT = keyof TokenT;
   type TokenMapT = Map<KeyT, TokenMapValueT<any>>;
 
   const tokenMap: TokenMapT = new Map();
 
-  const getToken = <K extends KeyT = any>(key: K): StoreT[K] => {
+  const getToken = <K extends KeyT = any>(key: K): TokenT[K] => {
     return tokenMap.get(key)?.value;
   };
 
@@ -42,7 +44,7 @@ export function getNewStore<StoreT>():Store<StoreT>  {
     return tokenMap;
   };
 
-  const setToken = <K extends KeyT = any>(token: StoreT[K], key: K) => {
+  const setToken = <K extends KeyT = any>(token: TokenT[K], key: K) => {
     if (tokenMap.get(key) === token) {
       return;
     }
@@ -59,13 +61,13 @@ export function getNewStore<StoreT>():Store<StoreT>  {
     }
   };
 
-  const subscribeToChange = <K extends KeyT = any>(key: K): Observable<StoreT[K]> => {
+  const subscribeToChange = <K extends KeyT = any>(key: K): Observable<TokenT[K]> => {
     const subject = tokenMap.get(key)?.subject;
 
     if (subject) {
       return subject.asObservable();
     } else {
-      const newSubject = new Subject<StoreT[K]>();
+      const newSubject = new Subject<TokenT[K]>();
 
       tokenMap.set(key, {
         subject: newSubject,
