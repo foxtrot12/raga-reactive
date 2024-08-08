@@ -1,6 +1,6 @@
 {
   "name": "raga-reactive",
-  "version": "4.20.69",
+  "version": "0.0.2",
   "description": "**RagaReactive** is a state management library built with RxJS, designed to provide a simple yet powerful way to manage state in your applications. It leverages observables and subjects to handle data flow, ensuring your app is dynamic and responsive.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
