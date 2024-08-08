@@ -1,42 +1,63 @@
 import { Observable, Subject } from "rxjs";
 
-/**
- * Notifier is Used for Sending any type of notification and events inside out application,
- * Notifier does not have any session storage
- */
-export class Notifier<MapKey = string> {
-    
-	private tokenMap: Map<MapKey, {
-		subject: Subject<any>
-	}> = new Map();
+type Notifier<NotifierMap> = {
+  notify: <NotifierK extends keyof NotifierMap>(
+    token: NotifierMap[NotifierK],
+    key: NotifierK
+  ) => void;
+  getNotified: <NotifierK extends keyof NotifierMap>(
+    key: NotifierK
+  ) => Observable<NotifierMap[NotifierK]>;
+  conpleteNotification: <NotifierK extends keyof NotifierMap>(
+    key: NotifierK
+  ) => void;
+};
 
-	public notify(token: any, key: MapKey) {
+export function getNewNotifier<NotifierMap>(): Notifier<NotifierMap> {
+  type NotifierKeysT = keyof NotifierMap;
 
-		let existingSubject = this.tokenMap.get(key)?.subject;
+  const tokenMap: Map<NotifierKeysT, Subject<NotifierMap[any]>> = new Map();
 
-		if(!existingSubject){
-			this.tokenMap.set(key, {
-				subject: new Subject()
-			});
-		}
+  const notify = <NotifierK extends NotifierKeysT>(
+    token: NotifierMap[NotifierK],
+    key: NotifierK
+  ) => {
+    let existingSubject = tokenMap.get(key);
 
-		if(existingSubject) {
-			existingSubject.next(token);
-		}
+    if (!existingSubject) {
+      const newSub = new Subject<NotifierMap[NotifierK]>();
+      tokenMap.set(key, newSub);
+    }
 
-	}
+    if (existingSubject) {
+      existingSubject.next(token);
+    }
+  };
 
-	public getNotified<TokenType = any>(key: MapKey): Observable<TokenType> {
-		if(this.tokenMap.get(key)?.subject) {
-			return (this.tokenMap.get(key) as any).subject.asObservable();
-		} else {
-			let newSubject = new Subject<TokenType>();
-			
-			this.tokenMap.set(key, {
-				subject: newSubject
-			});
+  const getNotified = <NotifierK extends NotifierKeysT>(
+    key: NotifierK
+  ): Observable<NotifierMap[NotifierK]> => {
+    const notifierSub = tokenMap.get(key);
+    if (notifierSub) {
+      return notifierSub;
+    } else {
+      const newSubject = new Subject<NotifierMap[NotifierK]>();
 
-			return newSubject.asObservable();
-		}
-	}
+      tokenMap.set(key, newSubject);
+
+      return newSubject.asObservable();
+    }
+  };
+
+  const conpleteNotification = <NotifierK extends NotifierKeysT>(
+    key: NotifierK
+  ) => {
+    tokenMap.get(key)?.complete();
+  };
+
+  return {
+    notify,
+    getNotified,
+    conpleteNotification,
+  };
 }

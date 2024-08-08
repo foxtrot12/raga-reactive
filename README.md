@@ -1,89 +1,150 @@
 # RagaReactive
 
-**RagaReactive** is a state management library built with RxJS, designed to provide a simple yet powerful way to manage state in your applications. It leverages observables and subjects to handle data flow, ensuring your app is dynamic and responsive.
+RagaReactive is a lightweight state management utility designed to simplify state handling in modern web applications. Built on top of RxJS, it offers a reactive approach to managing and subscribing to application state changes. The package provides two core components: a `Store` for managing state tokens and a `Notifier` for broadcasting changes.
 
-## Features
+### Key Features
 
-- **Easy to Use**: Simple API for managing application state.
-- **Reactive**: Built with RxJS to handle asynchronous data streams effortlessly.
-- **Scalable**: Suitable for both small and large applications.
-- **Flexible**: Integrates seamlessly with your existing architecture.
+- **RagaReactive**: Leverages RxJS to provide a reactive, observable-based interface for state management, enabling seamless integration with reactive programming patterns.
 
-## Installation
+- **Token-Based Store**: 
+  - **`getToken`**: Retrieve the current value associated with a specific token.
+  - **`setToken`**: Update the value of a token, triggering notifications to any subscribers.
+  - **`emptyStore`**: Clear all tokens from the store, with an option to remove listeners for a complete reset.
+  - **`subscribeToChange`**: Subscribe to changes in a specific token, receiving updates whenever the token's value changes.
 
-You can install RagaReactive using npm:
+- **Notifier System**:
+  - **`notify`**: Send notifications to subscribers when a specific event or token changes.
+  - **`getNotified`**: Subscribe to notifications for specific events, receiving updates as observables.
+  - **`conpleteNotification`**: Complete the notification for a specific event, signaling the end of notifications for that event.
 
-```bash
-npm install raga-reactive
-```
+### Usage
 
-## Getting Started
+1. **Store Management**:
+   - Initialize a store with `getNewStore` to manage state tokens dynamically.
+   - Use `setToken` and `getToken` to manipulate and access stored values.
+   - Employ `subscribeToChange` to react to state updates in your components or services.
 
-Here's a quick example to get you started with RagaReactive:
+2. **Notifier Integration**:
+   - Create a notifier instance with `getNewNotifier` to handle event-based communication.
+   - Use `notify` to broadcast changes or events.
+   - `getNotified` allows components to subscribe to and react to specific events.
+
+Here are some example code snippets to demonstrate how to use the `Store` and `Notifier` components from the state management utility:
+
+### Example: Using the Store
+
+Let's consider an example where we manage user information in the store:
 
 ```typescript
 import { getNewStore } from 'raga-reactive';
 
-// Define the shape of your store
-interface AppState {
-  user: string;
-  loggedIn: boolean;
+interface User {
+  id: number;
+  name: string;
+  email: string;
 }
 
-// Create a new store
+interface AppState {
+  user: User;
+  isLoggedIn: boolean;
+}
+
 const store = getNewStore<AppState>();
 
-// Set a token in the store
-store.setToken('John Doe', 'user');
-store.setToken(true, 'loggedIn');
+// Set initial state
+store.setToken({ id: 1, name: 'John Doe', email: 'john@example.com' }, 'user');
+store.setToken(false, 'isLoggedIn');
 
-// Subscribe to changes
+// Subscribe to changes in the user token
 store.subscribeToChange('user').subscribe((user) => {
   console.log('User updated:', user);
 });
 
-// Get a token from the store
+// Update user information
+store.setToken({ id: 1, name: 'Jane Doe', email: 'jane@example.com' }, 'user');
+
+// Get current state of a token
 const currentUser = store.getToken('user');
-console.log('Current user:', currentUser);
+console.log('Current User:', currentUser);
 
 // Empty the store
 store.emptyStore();
 ```
 
-## API
+### Example: Using the Notifier
 
-### `getNewStore<StoreT>()`
+Let's consider an example where we notify components about some events:
 
-Creates a new store instance.
+```typescript
+import { getNewNotifier } from 'raga-reactive';
 
-- **Returns**: An object with methods to manage state.
+interface NotificationMap {
+  newMessage: string;
+  userLoggedIn: boolean;
+}
 
-### Methods
+const notifier = getNewNotifier<NotificationMap>();
 
-#### `getToken<K extends KeyT>(key: K): StoreT[K]`
+// Subscribe to notifications for new messages
+notifier.getNotified('newMessage').subscribe((message) => {
+  console.log('New message received:', message);
+});
 
-Retrieves the value associated with the given key.
+// Notify subscribers about a new message
+notifier.notify('Hello, you have a new message!', 'newMessage');
 
-#### `setToken<K extends KeyT>(token: StoreT[K], key: K)`
+// Subscribe to notifications for user login
+notifier.getNotified('userLoggedIn').subscribe((isLoggedIn) => {
+  console.log('User login status:', isLoggedIn);
+});
 
-Sets a new value for the specified key in the store.
+// Notify subscribers about user login status change
+notifier.notify(true, 'userLoggedIn');
 
-#### `emptyStore(hardEmpty = false): StoreT`
+// Complete notifications for a specific key
+notifier.conpleteNotification('newMessage');
+```
 
-Empties the store. If `hardEmpty` is `true`, it also removes all listeners.
+### Combining Store and Notifier
 
-#### `subscribeToChange<K extends KeyT>(key: K): Observable<StoreT[K]>`
+You can combine both the `Store` and `Notifier` to create a cohesive state management solution for your application. Here's an example of how you might use both in a real application:
 
-Returns an observable that emits the value whenever it changes.
+```typescript
+interface GlobalState {
+  user: User;
+  theme: string;
+}
 
-## License
+interface GlobalNotifications {
+  themeChanged: string;
+}
 
-This project is licensed under the MIT License.
+const appStore = getNewStore<GlobalState>();
+const appNotifier = getNewNotifier<GlobalNotifications>();
 
-## Contributing
+// Set and update global state
+appStore.setToken({ id: 2, name: 'Alice', email: 'alice@example.com' }, 'user');
+appStore.setToken('light', 'theme');
 
-Contributions are welcome! Please feel free to submit a pull request or open an issue.
+// Subscribe to store changes and notify subscribers
+appStore.subscribeToChange('theme').subscribe((newTheme) => {
+  console.log('Theme updated:', newTheme);
+  appNotifier.notify(newTheme, 'themeChanged');
+});
 
-## Contact
+// Change theme and trigger notifications
+appStore.setToken('dark', 'theme');
 
-For questions or feedback, please contact Chinmaya at s.chinmaya@myyahoo.com.
+// Listen for theme change notifications
+appNotifier.getNotified('themeChanged').subscribe((newTheme) => {
+  console.log('Notifier received theme change:', newTheme);
+});
+```
+
+### Explanation
+
+- **Store Example**: We create a store to manage `user` and `isLoggedIn` state. We set initial values, subscribe to changes, update tokens, and retrieve the current state.
+
+- **Notifier Example**: We create a notifier to handle events like `newMessage` and `userLoggedIn`. We subscribe to notifications and send events when necessary.
+
+- **Combining Store and Notifier**: We demonstrate how the store and notifier can work together. For example, when the `theme` token changes, we notify all subscribers about the change using the notifier.
