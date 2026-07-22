@@ -8,14 +8,15 @@ RagaReactive is a lightweight state management utility designed to simplify stat
 
 - **Token-Based Store**: 
   - **`getToken`**: Retrieve the current value associated with a specific token.
-  - **`setToken`**: Update the value of a token, triggering notifications to any subscribers.
-  - **`emptyStore`**: Clear all tokens from the store, with an option to remove listeners for a complete reset.
-  - **`subscribeToChange`**: Subscribe to changes in a specific token, receiving updates whenever the token's value changes.
+  - **`setToken`**: Update the value of a token, triggering notifications to any subscribers. Ignores redundant updates if the value has not changed.
+  - **`emptyStore`**: Clear all tokens from the store, with an option to remove listeners (completes active subjects) for a complete reset.
+  - **`subscribeToChange`**: Subscribe to changes in a specific token, receiving the current value immediately upon subscription (powered by `ReplaySubject(1)`) and any subsequent updates.
+  - **`select`**: Subscribe to a specific slice or projection of a token's state. Uses `distinctUntilChanged` to avoid redundant notifications for downstream subscribers.
 
 - **Notifier System**:
   - **`notify`**: Send notifications to subscribers when a specific event or token changes.
   - **`getNotified`**: Subscribe to notifications for specific events, receiving updates as observables.
-  - **`conpleteNotification`**: Complete the notification for a specific event, signaling the end of notifications for that event.
+  - **`completeNotification`**: Complete the notification for a specific event, signaling the end of notifications for that event (previously `conpleteNotification`, which remains supported as a deprecated alias).
 
 ### Usage
 
@@ -23,6 +24,7 @@ RagaReactive is a lightweight state management utility designed to simplify stat
    - Initialize a store with `getNewStore` to manage state tokens dynamically.
    - Use `setToken` and `getToken` to manipulate and access stored values.
    - Employ `subscribeToChange` to react to state updates in your components or services.
+   - Use `select` to target nested state fields or transform states.
 
 2. **Notifier Integration**:
    - Create a notifier instance with `getNewNotifier` to handle event-based communication.
@@ -55,9 +57,14 @@ const store = getNewStore<AppState>();
 store.setToken({ id: 1, name: 'John Doe', email: 'john@example.com' }, 'user');
 store.setToken(false, 'isLoggedIn');
 
-// Subscribe to changes in the user token
+// Subscribe to changes in the user token (receives current value immediately)
 store.subscribeToChange('user').subscribe((user) => {
   console.log('User updated:', user);
+});
+
+// Select a slice of state (e.g. just the user's name)
+store.select('user', (user) => user.name).subscribe((name) => {
+  console.log('User name is:', name);
 });
 
 // Update user information
@@ -102,7 +109,7 @@ notifier.getNotified('userLoggedIn').subscribe((isLoggedIn) => {
 notifier.notify(true, 'userLoggedIn');
 
 // Complete notifications for a specific key
-notifier.conpleteNotification('newMessage');
+notifier.completeNotification('newMessage');
 ```
 
 ### Combining Store and Notifier
@@ -143,7 +150,7 @@ appNotifier.getNotified('themeChanged').subscribe((newTheme) => {
 
 ### Explanation
 
-- **Store Example**: We create a store to manage `user` and `isLoggedIn` state. We set initial values, subscribe to changes, update tokens, and retrieve the current state.
+- **Store Example**: We create a store to manage `user` and `isLoggedIn` state. We set initial values, subscribe to changes, project specific properties using `select`, update tokens, and retrieve the current state.
 
 - **Notifier Example**: We create a notifier to handle events like `newMessage` and `userLoggedIn`. We subscribe to notifications and send events when necessary.
 

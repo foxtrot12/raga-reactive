@@ -8,7 +8,11 @@ type Notifier<NotifierMap> = {
   getNotified: <NotifierK extends keyof NotifierMap>(
     key: NotifierK
   ) => Observable<NotifierMap[NotifierK]>;
+  /** @deprecated Use completeNotification instead */
   conpleteNotification: <NotifierK extends keyof NotifierMap>(
+    key: NotifierK
+  ) => void;
+  completeNotification: <NotifierK extends keyof NotifierMap>(
     key: NotifierK
   ) => void;
 };
@@ -25,13 +29,11 @@ export function getNewNotifier<NotifierMap>(): Notifier<NotifierMap> {
     let existingSubject = tokenMap.get(key);
 
     if (!existingSubject) {
-      const newSub = new Subject<NotifierMap[NotifierK]>();
-      tokenMap.set(key, newSub);
+      existingSubject = new Subject<NotifierMap[NotifierK]>();
+      tokenMap.set(key, existingSubject);
     }
 
-    if (existingSubject) {
-      existingSubject.next(token);
-    }
+    existingSubject.next(token);
   };
 
   const getNotified = <NotifierK extends NotifierKeysT>(
@@ -39,7 +41,7 @@ export function getNewNotifier<NotifierMap>(): Notifier<NotifierMap> {
   ): Observable<NotifierMap[NotifierK]> => {
     const notifierSub = tokenMap.get(key);
     if (notifierSub) {
-      return notifierSub;
+      return notifierSub.asObservable();
     } else {
       const newSubject = new Subject<NotifierMap[NotifierK]>();
 
@@ -49,15 +51,18 @@ export function getNewNotifier<NotifierMap>(): Notifier<NotifierMap> {
     }
   };
 
-  const conpleteNotification = <NotifierK extends NotifierKeysT>(
+  const completeNotification = <NotifierK extends NotifierKeysT>(
     key: NotifierK
   ) => {
     tokenMap.get(key)?.complete();
   };
 
+  const conpleteNotification = completeNotification;
+
   return {
     notify,
     getNotified,
     conpleteNotification,
+    completeNotification,
   };
 }
